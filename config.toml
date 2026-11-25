@@ -1,0 +1,57 @@
+# Constantes do modelo de decisão. Nenhum limiar fica hardcoded no código.
+
+[location]
+name = "Osasco"
+state = "SP"
+latitude = -23.53
+longitude = -46.79
+cptec_city_code = 3656
+timezone = "America/Sao_Paulo"
+
+[thresholds]
+# hora boa para varal
+precip_mm_max = 0.2           # mm na hora
+precip_prob_max_pct = 40.0    # %
+vpd_min_kpa = 0.4
+vpd_night_min_kpa = 0.8       # sem sol, só seca se o ar estiver muito seco
+gust_max_kmh = 40.0
+day_start_hour = 6            # [6, 19) conta como dia
+day_end_hour = 19
+
+# janelas
+day_window_min_hours = 2
+night_window_min_hours = 4
+dry_day_hours_target = 8
+water_retained_mm = 1.5       # ~1,5 L/m² pós-centrífuga
+# dry_rate de reserva quando a fonte não traz ET0: 0.35*VPD*(0.5+0.06*vento_kmh)
+fallback_dry_rate_k = 0.35
+fallback_dry_rate_cap = 1.2
+
+# score
+overnight_carry_hour = 12     # janela do dia D pode cruzar a madrugada até 12h de D+1
+cptec_lock_penalty = 25
+gust_penalty = 15
+label_good_min = 70
+label_short_min = 40
+
+# alerta de chuva
+rain_alert_prob_pct = 60.0
+rain_alert_mm = 0.5
+rain_alert_horizon_hours = 3
+rain_alert_shift_hours = 2    # re-alerta só se o início da chuva mudar >= 2 h
+
+[cptec]
+# siglas de condição do CPTEC/INPE; chuva trava o dia
+rain_codes = ["c", "ec", "ci", "in", "pp", "psc", "cm", "ct", "cn",
+              "pcm", "pct", "pcn", "pt", "pnt", "np", "ncm", "nct", "ncn"]
+morning_codes = ["cm", "pcm", "ncm"]
+afternoon_codes = ["ct", "pct", "nct", "pt", "pnt", "np"]
+night_codes = ["cn", "pcn", "ncn"]
+afternoon_start_hour = 12
+
+[report]
+start_hour = 9                # enviado no primeiro run com hora local em
+end_hour = 10                 # [start_hour, end_hour] (10:59 inclusive)
+
+[retention]
+forecast_days = 90
