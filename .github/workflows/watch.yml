@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "15 * * * *" # UTC; 09-10h local = 12-13h UTC
   workflow_dispatch:
+    inputs:
+      force_report:
+        description: "Enviar o relatório mesmo fora da janela 09-10h"
+        type: boolean
+        default: false
 
 concurrency:
   group: watch
@@ -19,7 +24,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: uv sync --frozen
-      - run: uv run watch --once
+      - run: uv run watch --once ${{ inputs.force_report && '--force-report' || '' }}
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
