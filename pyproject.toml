@@ -1,0 +1,25 @@
+[project]
+name = "clothesline-weather-watch"
+version = "0.1.0"
+description = "Veredito diário de varal para Osasco/SP a partir de 3 APIs abertas"
+requires-python = ">=3.12"
+dependencies = [
+  "httpx>=0.27",
+  "psycopg[binary]>=3.2",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.3"]
+
+[project.scripts]
+watch = "clothesline.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/clothesline"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
