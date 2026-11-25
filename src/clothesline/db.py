@@ -219,8 +219,12 @@ def main(argv: list[str] | None = None) -> int:
     if args[:1] != ["migrate"]:
         print("uso: python -m clothesline.db migrate", file=sys.stderr)
         return 2
-    with connect() as conn:
-        applied = apply_migrations(conn)
+    try:
+        with connect() as conn:
+            applied = apply_migrations(conn)
+    except RuntimeError as exc:
+        print(f"erro: {exc}", file=sys.stderr)
+        return 1
     print(f"ok: {len(applied)} migration(s) aplicada(s)")
     return 0
 
