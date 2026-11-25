@@ -6,8 +6,7 @@
 
 ## Comandos
     uv run watch --once --dry-run   # ingestão real, sem DB e sem Telegram
-    uv run watch --once             # produção
-    uv run python -m clothesline.db migrate
+    uv run watch --once             # produção (aplica migrations sozinho)
 
 ## Antes de dizer "pronto"
 1. `uv run pytest && uv run watch --once --dry-run` — testes verdes e mensagem
@@ -21,6 +20,8 @@
   sem trava CPTEC; é o comportamento esperado, não fonte fora do ar.
 - `astral-sh/setup-uv` não publica tag móvel v10: pine a release (v10.4.0), ou o
   job morre em "Unable to resolve action".
+- httpx em INFO loga a URL do `sendMessage`, que carrega o token do bot: por isso
+  `configure_logging` rebaixa httpx/httpcore para WARNING (repo é público).
 
 ## Ações que exigem minha confirmação
 - Migration em banco de produção, `--force-report` (mensagem real no Telegram),

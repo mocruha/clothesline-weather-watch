@@ -39,3 +39,10 @@ def test_send_fails_fast_on_4xx(monkeypatch):
 def test_send_requires_credentials():
     with pytest.raises(notify.NotifyError):
         notify.send("", "chat", "mensagem")
+
+def test_logging_never_leaks_the_bot_token():
+    from clothesline import cli
+
+    cli.configure_logging()
+    assert notify.logging.getLogger("httpx").level == notify.logging.WARNING
+    assert notify.logging.getLogger("httpcore").level == notify.logging.WARNING

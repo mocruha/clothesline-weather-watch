@@ -263,6 +263,13 @@ def _window_payload(window: score.Window) -> dict:
     }
 
 
+def configure_logging() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
+    # o httpx loga a URL completa no INFO, e a URL do Telegram carrega o token
+    for noisy in ("httpx", "httpcore"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="watch", description="Relatório de varal a partir de 3 APIs abertas"
@@ -279,7 +286,7 @@ def main(argv: list[str] | None = None) -> int:
         help="envia o relatório mesmo fora da janela 09-10h (teste manual)",
     )
     args = parser.parse_args(argv)
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s %(message)s")
+    configure_logging()
     if not args.once:
         parser.error("apenas --once é suportado; o agendamento é o cron do Actions")
     try:
