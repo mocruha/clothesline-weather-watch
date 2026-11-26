@@ -8,6 +8,7 @@
     uv run watch --once --dry-run   # ingestão real, sem DB e sem Telegram
     uv run watch --once             # produção (aplica migrations sozinho)
     DATABASE_URL=<staging> uv run python scripts/sanity.py   # sanidade do staging
+    gh workflow run sanity-staging.yml   # a mesma sanidade no CI (sem DSN local)
 
 ## Antes de dizer "pronto"
 1. `uv run pytest && uv run watch --once --dry-run` — testes verdes e mensagem
