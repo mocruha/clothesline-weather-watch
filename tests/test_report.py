@@ -82,6 +82,26 @@ def test_evening_report_keeps_window_that_still_runs(cfg, make_hours):
     assert "janela 17h–20h" in text
 
 
+def test_report_renders_midnight_window_end_as_24h(cfg, make_hours):
+    # dia bom: 24h boas, eta 3h -> janela 00h->00h, pendure 21h, seca 03h
+    hours = make_hours(DAY, count=24, vpd=1.2, et0=0.5)
+    verdict = score.day_verdict(hours, DAY, cfg)
+    text = report.render_report(verdict, cfg, sources_ok=["open_meteo"], failures=[])
+    assert "janela 00h–24h" in text
+    assert "pendure 21h–24h" in text
+    assert "seca ~03h" in text
+    assert "00h–00h" not in text
+
+
+def test_report_marks_drying_after_midnight_as_madrugada(cfg, make_hours):
+    # janela noturna 21h->03h do dia seguinte, eta 6h -> seca 03h (madrugada)
+    hours = make_hours(DAY, start_hour=21, count=6, vpd=1.2, et0=0.25)
+    verdict = score.day_verdict(hours, DAY, cfg)
+    text = report.render_report(verdict, cfg, sources_ok=["open_meteo"], failures=[])
+    assert "21h–03h" in text
+    assert "seca ~03h (madrugada)" in text
+
+
 def test_alert_names_first_rain_and_last_good_hour(cfg, make_hours):
     hours = make_hours(
         DAY, count=24, vpd=1.2, et0=0.5, overrides={15: {"prob": 85.0, "precip": 1.2}}

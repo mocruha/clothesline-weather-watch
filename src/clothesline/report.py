@@ -26,8 +26,19 @@ def _clock(value: datetime) -> str:
     return value.strftime("%Hh")
 
 
+def _clock_end(value: datetime) -> str:
+    """Hora 0 como fim de janela/intervalo é meia-noite: renderiza 24h."""
+    return "24h" if value.hour == 0 and value.minute == 0 else _clock(value)
+
+
+def _clock_late(value: datetime, anchor: datetime) -> str:
+    """Hora no dia seguinte ao início da janela ganha o sufixo (madrugada)."""
+    text = _clock(value)
+    return f"{text} (madrugada)" if value.date() > anchor.date() else text
+
+
 def _span(window: Window) -> str:
-    return f"{_clock(window.start)}–{_clock(window.end)}"
+    return f"{_clock(window.start)}–{_clock_end(window.end)}"
 
 
 def _best_windows(windows: list[Window], limit: int = 2) -> list[Window]:
@@ -43,11 +54,14 @@ def _window_line(window: Window, th) -> str:
     if window.dry_at is None:
         return f"{head} {_span(window)} · não seca dentro da janela"
     hang = (
-        f"pendure {_clock(window.hang_by)}–{_clock(window.end)}"
+        f"pendure {_clock(window.hang_by)}–{_clock_end(window.end)}"
         if window.hang_by and window.hang_by > window.start
-        else f"pendure até {_clock(window.hang_by)}"
+        else f"pendure até {_clock_late(window.hang_by, window.start)}"
     )
-    return f"{head} {_span(window)} · {hang}, seca ~{_clock(window.dry_at)}"
+    return (
+        f"{head} {_span(window)} · {hang}, "
+        f"seca ~{_clock_late(window.dry_at, window.start)}"
+    )
 
 
 def _headline(verdict: DayVerdict, th) -> str:
