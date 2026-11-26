@@ -14,12 +14,13 @@ uv sync
 uv run pytest
 uv run watch --once --dry-run   # ingestão real, imprime a mensagem, sem DB/Telegram
 uv run watch --once             # exige DATABASE_URL + Telegram
-uv run watch --once --force-report   # envia o relatório fora da janela 09-10h
+uv run watch --once --force-report   # envia os relatórios (manhã e tarde) fora da janela
 ```
 
 WhatsApp não: o horário do relatório é decidido pelo relógio de São Paulo — o
-relatório sai no primeiro run cujo horário local esteja entre 09:00 e 10:59 e
-ainda não tenha sido enviado naquele dia.
+relatório da manhã sai no primeiro run cujo horário local esteja entre 09:00 e
+10:59, e o da tarde no primeiro run entre 16:00 e 17:59, cada um uma vez por dia.
+Os dois trazem o bloco "Amanhã" com o veredito de D+1.
 
 `config.toml` guarda local, cityCode do CPTEC e todos os limiares (VPD, chuva,
 rajada, água retida). Mudar de cidade é editar esse arquivo; o cityCode sai de
@@ -53,8 +54,9 @@ rajada, água retida). Mudar de cidade é editar esse arquivo; o cityCode sai de
    hora para começar a disparar). `--force-report` é o caminho manual quando
    você quiser ver a mensagem agora.
 
-O cron é UTC e o GitHub atrasa runs em 5–30 min; a chave `report:{dia}` na
-tabela `notifications` garante um relatório por dia mesmo com atraso ou re-run.
+O cron é UTC e o GitHub atrasa runs em 5–30 min; as chaves `report:{dia}` e
+`report-evening:{dia}` na tabela `notifications` garantem um relatório de cada
+por dia mesmo com atraso ou re-run.
 
 ## Dados
 

@@ -52,6 +52,8 @@ afternoon_start_hour = 12
 [report]
 start_hour = 9                # enviado no primeiro run com hora local em
 end_hour = 10                 # [start_hour, end_hour] (10:59 inclusive)
+evening_start_hour = 16       # segundo relatório: primeiro run em
+evening_end_hour = 17         # [16, 17] (17:59 inclusive)
 
 [retention]
 forecast_days = 90

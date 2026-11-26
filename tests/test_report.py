@@ -1,9 +1,15 @@
-from datetime import date
+from datetime import date, datetime, timedelta
 
 from clothesline import report, score
 from clothesline.sources import DailyPoint
 
 DAY = date(2026, 11, 25)
+
+
+def tomorrow_verdict(cfg, make_hours):
+    day = DAY + timedelta(days=1)
+    hours = make_hours(day, count=24, vpd=1.2, et0=0.6)
+    return score.day_verdict(hours, day, cfg)
 
 
 def test_report_has_score_window_and_cptec_disagreement(cfg, make_hours):
@@ -12,8 +18,13 @@ def test_report_has_score_window_and_cptec_disagreement(cfg, make_hours):
     hours = make_hours(DAY, count=24, vpd=1.2, et0=0.5, overrides=overrides)
     cptec = DailyPoint(city_code=3656, day=DAY, condicao="ci", condicao_desc="Chuvas Isoladas")
     verdict = score.day_verdict(hours, DAY, cfg, cptec)
+    tomorrow = tomorrow_verdict(cfg, make_hours)
     text = report.render_report(
-        verdict, cfg, sources_ok=["open_meteo", "met_no", "cptec"], failures=[]
+        verdict,
+        cfg,
+        sources_ok=["open_meteo", "met_no", "cptec"],
+        failures=[],
+        tomorrow=tomorrow,
     )
     assert "Varal em Osasco" in text
     assert f"Score {verdict.score}/100" in text
@@ -21,16 +32,54 @@ def test_report_has_score_window_and_cptec_disagreement(cfg, make_hours):
     assert "CPTEC: Chuvas Isoladas" in text
     assert "CPTEC prevê chuva" in text
     assert "Open-Meteo, MET Norway, CPTEC/INPE" in text
+    assert "Amanhã" in text
+    assert f"Score {tomorrow.score}/100" in text
 
 
 def test_report_reports_missing_cptec_source(cfg, make_hours):
     hours = make_hours(DAY, count=24, vpd=1.2, et0=0.6)
     verdict = score.day_verdict(hours, DAY, cfg)
     text = report.render_report(
-        verdict, cfg, sources_ok=["open_meteo", "met_no"], failures=["cptec"]
+        verdict,
+        cfg,
+        sources_ok=["open_meteo", "met_no"],
+        failures=["cptec"],
+        tomorrow=tomorrow_verdict(cfg, make_hours),
     )
     assert "CPTEC/INPE indisponível" in text
     assert "fora: CPTEC/INPE" in text
+
+
+def test_report_without_tomorrow_data_says_so(cfg, make_hours):
+    hours = make_hours(DAY, count=24, vpd=1.2, et0=0.6)
+    verdict = score.day_verdict(hours, DAY, cfg)
+    text = report.render_report(verdict, cfg, sources_ok=["open_meteo"], failures=[])
+    assert "Amanhã: sem dados" in text
+
+
+def test_evening_report_drops_windows_that_already_ended(cfg, make_hours):
+    overrides = {i: {"prob": 45.0} for i in list(range(0, 8)) + list(range(15, 24))}
+    hours = make_hours(DAY, count=24, vpd=1.2, et0=0.5, overrides=overrides)
+    verdict = score.day_verdict(hours, DAY, cfg)
+    now_local = datetime(2026, 11, 25, 16, 30, tzinfo=cfg.location.tz)
+    text = report.render_report(
+        verdict, cfg, sources_ok=["open_meteo"], failures=[], evening=True, now_local=now_local
+    )
+    assert "fim de tarde" in text
+    assert "nenhuma janela boa no resto do dia" in text
+    assert "08h–15h" not in text
+
+
+def test_evening_report_keeps_window_that_still_runs(cfg, make_hours):
+    overrides = {i: {"prob": 45.0} for i in list(range(0, 17)) + list(range(20, 24))}
+    hours = make_hours(DAY, count=24, vpd=1.2, et0=0.5, overrides=overrides)
+    verdict = score.day_verdict(hours, DAY, cfg)
+    now_local = datetime(2026, 11, 25, 16, 30, tzinfo=cfg.location.tz)
+    text = report.render_report(
+        verdict, cfg, sources_ok=["open_meteo"], failures=[], evening=True, now_local=now_local
+    )
+    assert "fim de tarde" in text
+    assert "janela 17h–20h" in text
 
 
 def test_alert_names_first_rain_and_last_good_hour(cfg, make_hours):

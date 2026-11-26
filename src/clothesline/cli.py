@@ -69,6 +69,10 @@ def in_report_window(now_local: datetime, cfg: Config) -> bool:
     return cfg.report.start_hour <= now_local.hour <= cfg.report.end_hour
 
 
+def in_evening_window(now_local: datetime, cfg: Config) -> bool:
+    return cfg.report.evening_start_hour <= now_local.hour <= cfg.report.evening_end_hour
+
+
 def rain_event(hours: list[score.Hour], now_local: datetime, cfg: Config) -> score.Hour | None:
     """Primeira hora com chuva relevante nas próximas rain_alert_horizon_hours."""
     th = cfg.thresholds
@@ -115,26 +119,66 @@ def plan(
     today = now_local.date()
     cptec_today = next((d for d in dailies if d.day == today), None)
     verdict = score.day_verdict(hours, today, cfg, cptec_today)
+    tomorrow = today + timedelta(days=1)
+    tomorrow_verdict = None
+    if any(h.local.date() == tomorrow for h in hours):
+        cptec_tomorrow = next((d for d in dailies if d.day == tomorrow), None)
+        tomorrow_verdict = score.day_verdict(hours, tomorrow, cfg, cptec_tomorrow)
     messages: list[Message] = []
+    sources_ok = sorted({s for h in hours if h.local.date() == today for s in h.sources})
+    if cptec_today is not None:
+        sources_ok.append("cptec")
 
     if in_report_window(now_local, cfg) or force_report:
         key = f"report:{today.isoformat()}"
         if not store.has(key):
-            sources_ok = sorted({s for h in hours if h.local.date() == today for s in h.sources})
-            if cptec_today is not None:
-                sources_ok.append("cptec")
             messages.append(
                 Message(
                     key=key,
                     kind="report",
                     text=report.render_report(
-                        verdict, cfg, sources_ok=sources_ok, failures=failures
+                        verdict,
+                        cfg,
+                        sources_ok=sources_ok,
+                        failures=failures,
+                        tomorrow=tomorrow_verdict,
                     ),
                     payload={
                         "day": today.isoformat(),
                         "score": verdict.score,
                         "label": verdict.label,
                         "windows": len(verdict.windows),
+                        "tomorrow_score": (
+                            tomorrow_verdict.score if tomorrow_verdict else None
+                        ),
+                    },
+                )
+            )
+
+    if in_evening_window(now_local, cfg) or force_report:
+        key = f"report-evening:{today.isoformat()}"
+        if not store.has(key):
+            messages.append(
+                Message(
+                    key=key,
+                    kind="report",
+                    text=report.render_report(
+                        verdict,
+                        cfg,
+                        sources_ok=sources_ok,
+                        failures=failures,
+                        tomorrow=tomorrow_verdict,
+                        evening=True,
+                        now_local=now_local,
+                    ),
+                    payload={
+                        "day": today.isoformat(),
+                        "score": verdict.score,
+                        "label": verdict.label,
+                        "windows": len(verdict.windows),
+                        "tomorrow_score": (
+                            tomorrow_verdict.score if tomorrow_verdict else None
+                        ),
                     },
                 )
             )
@@ -283,7 +327,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--force-report",
         action="store_true",
-        help="envia o relatório mesmo fora da janela 09-10h (teste manual)",
+        help="envia os relatórios (manhã e tarde) mesmo fora das janelas (teste manual)",
     )
     args = parser.parse_args(argv)
     configure_logging()

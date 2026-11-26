@@ -28,8 +28,45 @@ def test_report_is_sent_once_per_day(cfg, make_hours):
 
 def test_no_report_outside_window(cfg, make_hours):
     hours = make_hours(DAY, count=24, vpd=1.2, et0=0.6)
-    decision = plan(cfg, hours, [], at(cfg, 15, 0), MemoryStore())
-    assert decision.messages == []
+    assert plan(cfg, hours, [], at(cfg, 15, 0), MemoryStore()).messages == []
+    assert plan(cfg, hours, [], at(cfg, 15, 59), MemoryStore()).messages == []
+
+
+def test_morning_report_includes_tomorrow(cfg, make_hours):
+    hours = make_hours(DAY, count=48, vpd=1.2, et0=0.6)
+    decision = plan(cfg, hours, [], at(cfg, 9, 30), MemoryStore())
+    assert [m.key for m in decision.messages] == ["report:2026-11-25"]
+    assert isinstance(decision.messages[0].payload["tomorrow_score"], int)
+    assert "Amanhã" in decision.messages[0].text
+
+
+def test_evening_report_is_sent_once_per_day(cfg, make_hours):
+    hours = make_hours(DAY, count=48, vpd=1.2, et0=0.6)
+    store = MemoryStore()
+    first = plan(cfg, hours, [], at(cfg, 16, 30), store)
+    assert [m.kind for m in first.messages] == ["report"]
+    assert first.messages[0].key == "report-evening:2026-11-25"
+    assert "fim de tarde" in first.messages[0].text
+
+    for message in first.messages:
+        store.record(message.key, message.kind, message.payload)
+    assert plan(cfg, hours, [], at(cfg, 16, 55), store).messages == []
+
+
+def test_evening_key_is_independent_from_morning_key(cfg, make_hours):
+    hours = make_hours(DAY, count=48, vpd=1.2, et0=0.6)
+    store = MemoryStore()
+    store.record("report:2026-11-25", "report", {})
+    decision = plan(cfg, hours, [], at(cfg, 16, 30), store)
+    assert [m.key for m in decision.messages] == ["report-evening:2026-11-25"]
+
+
+def test_evening_report_survives_without_tomorrow_hours(cfg, make_hours):
+    hours = make_hours(DAY, count=24, vpd=1.2, et0=0.6)
+    decision = plan(cfg, hours, [], at(cfg, 16, 30), MemoryStore())
+    assert [m.key for m in decision.messages] == ["report-evening:2026-11-25"]
+    assert decision.messages[0].payload["tomorrow_score"] is None
+    assert "Amanhã: sem dados" in decision.messages[0].text
 
 
 def test_rain_alert_fires_when_day_recommended_varal(cfg, make_hours):
@@ -91,3 +128,4 @@ def test_dry_run_prints_message_without_touching_db(cfg, monkeypatch):
     assert "Varal em Osasco" in text
     assert "Score" in text
     assert "fontes:" in text
+    assert "fim de tarde" in text

@@ -30,9 +30,9 @@ def _span(window: Window) -> str:
     return f"{_clock(window.start)}–{_clock(window.end)}"
 
 
-def _best_windows(verdict: DayVerdict, limit: int = 2) -> list[Window]:
+def _best_windows(windows: list[Window], limit: int = 2) -> list[Window]:
     ordered = sorted(
-        verdict.windows,
+        windows,
         key=lambda w: (w.kind == "night", -w.hours),
     )
     return ordered[:limit]
@@ -75,18 +75,41 @@ def _disagreement(verdict: DayVerdict, th, failures: list[str]) -> str:
     return "⚖️ CPTEC e modelos horários concordam: sem chuva"
 
 
+def _tomorrow_block(tomorrow: DayVerdict | None, th) -> list[str]:
+    if tomorrow is None:
+        return ["🔮 Amanhã: sem dados dos modelos horários"]
+    best = _best_windows(tomorrow.windows, limit=1)
+    lines = [
+        f"🔮 *Amanhã — {WEEKDAYS[tomorrow.day.weekday()]} {tomorrow.day:%d/%m}*",
+        f"Score {tomorrow.score}/100 · {tomorrow.label}",
+        f"🌡️ {_n(tomorrow.tmin_c)}–{_n(tomorrow.tmax_c)} °C · "
+        f"🌧️ prob máx {_n(tomorrow.precip_prob_max)}% · "
+        f"pico {_n(tomorrow.precip_mm_max, 1)} mm/h · "
+        f"💨 rajada {_n(tomorrow.gust_max_kmh)} km/h",
+        _window_line(best[0], th) if best else "🧺 nenhuma janela boa amanhã",
+    ]
+    if tomorrow.cptec_desc:
+        period = f" ({tomorrow.cptec_period})" if tomorrow.cptec_period else ""
+        lines.append(f"📊 CPTEC: {tomorrow.cptec_desc}{period}")
+    return lines
+
+
 def render_report(
     verdict: DayVerdict,
     cfg: Config,
     *,
     sources_ok: list[str],
     failures: list[str],
+    tomorrow: DayVerdict | None = None,
+    evening: bool = False,
+    now_local: datetime | None = None,
 ) -> str:
     th = cfg.thresholds
     city = cfg.location.name
+    when = f"{WEEKDAYS[verdict.day.weekday()]} {verdict.day:%d/%m}"
     lines = [
         f"{_headline(verdict, th)} *Varal em {city} — "
-        f"{WEEKDAYS[verdict.day.weekday()]} {verdict.day:%d/%m}*",
+        f"{f'fim de tarde {when}' if evening else when}*",
         f"Score {verdict.score}/100 · {verdict.label}",
         "",
         f"🌡️ {_n(verdict.tmin_c)}–{_n(verdict.tmax_c)} °C · "
@@ -99,9 +122,14 @@ def render_report(
         "",
     ]
 
-    best = _best_windows(verdict)
+    candidates = verdict.windows
+    if evening and now_local is not None:
+        candidates = [w for w in candidates if w.end > now_local]
+    best = _best_windows(candidates)
     if best:
         lines.extend(_window_line(window, th) for window in best)
+    elif evening:
+        lines.append("🧺 nenhuma janela boa no resto do dia")
     else:
         lines.append("🧺 nenhuma janela boa hoje — melhor não pendurar")
 
@@ -109,6 +137,8 @@ def render_report(
         period = f" ({verdict.cptec_period})" if verdict.cptec_period else ""
         lines.append(f"📊 CPTEC: {verdict.cptec_desc}{period}")
     lines.append(_disagreement(verdict, th, failures))
+    lines.append("")
+    lines.extend(_tomorrow_block(tomorrow, th))
 
     labels = [SOURCE_LABELS.get(s, s) for s in sources_ok]
     if failures:
