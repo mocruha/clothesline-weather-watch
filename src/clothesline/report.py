@@ -37,6 +37,13 @@ def _clock_late(value: datetime, anchor: datetime) -> str:
     return f"{text} (madrugada)" if value.date() > anchor.date() else text
 
 
+def _uv(value: float | None) -> str:
+    """UV sem decimal quando ele é 0: 5 em vez de 5,0; 5,5 continua 5,5."""
+    if value is None:
+        return "—"
+    return _n(value, 0 if round(value, 1).is_integer() else 1)
+
+
 def _span(window: Window) -> str:
     return f"{_clock(window.start)}–{_clock_end(window.end)}"
 
@@ -75,8 +82,8 @@ def _headline(verdict: DayVerdict, th) -> str:
 def _disagreement(verdict: DayVerdict, th, failures: list[str]) -> str:
     if verdict.cptec_desc is None:
         if "cptec" in failures:
-            return "⚖️ CPTEC/INPE indisponível neste run"
-        return "⚖️ CPTEC não traz previsão para hoje"
+            return "📡 CPTEC/INPE indisponível neste run"
+        return "ℹ️ CPTEC não traz previsão para hoje"
     models_rain = (verdict.precip_prob_max or 0) >= th.rain_alert_prob_pct or (
         verdict.precip_mm_max or 0
     ) >= th.rain_alert_mm
@@ -97,9 +104,10 @@ def _tomorrow_block(tomorrow: DayVerdict | None, th) -> list[str]:
         f"🔮 *Amanhã — {WEEKDAYS[tomorrow.day.weekday()]} {tomorrow.day:%d/%m}*",
         f"Score {tomorrow.score}/100 · {tomorrow.label}",
         f"🌡️ {_n(tomorrow.tmin_c)}–{_n(tomorrow.tmax_c)} °C · "
-        f"🌧️ prob máx {_n(tomorrow.precip_prob_max)}% · "
-        f"pico {_n(tomorrow.precip_mm_max, 1)} mm/h · "
-        f"💨 rajada {_n(tomorrow.gust_max_kmh)} km/h",
+        f"💨 vento {_n(tomorrow.wind_max_kmh)} km/h "
+        f"(rajada {_n(tomorrow.gust_max_kmh)} km/h)",
+        f"🌧️ chuva: prob máx {_n(tomorrow.precip_prob_max)}% · "
+        f"pico {_n(tomorrow.precip_mm_max, 1)} mm/h",
         _window_line(best[0], th) if best else "🧺 nenhuma janela boa amanhã",
     ]
     if tomorrow.cptec_desc:
@@ -129,8 +137,8 @@ def render_report(
         f"🌡️ {_n(verdict.tmin_c)}–{_n(verdict.tmax_c)} °C · "
         f"💧 umidade {_n(verdict.humidity_mean)}% · "
         f"💨 vento {_n(verdict.wind_max_kmh)} km/h "
-        f"(rajada {_n(verdict.gust_max_kmh)}) · "
-        f"☀️ UV {_n(verdict.uv_max, 1)}",
+        f"(rajada {_n(verdict.gust_max_kmh)} km/h) · "
+        f"☀️ UV {_uv(verdict.uv_max)}",
         f"🌧️ chuva: prob máx {_n(verdict.precip_prob_max)}% · "
         f"pico {_n(verdict.precip_mm_max, 1)} mm/h",
         "",
@@ -155,9 +163,10 @@ def render_report(
     lines.extend(_tomorrow_block(tomorrow, th))
 
     labels = [SOURCE_LABELS.get(s, s) for s in sources_ok]
+    line = "🔌 fontes: " + ", ".join(labels)
     if failures:
-        labels.append("fora: " + ", ".join(SOURCE_LABELS.get(f, f) for f in failures))
-    lines.append("🔌 fontes: " + ", ".join(labels))
+        line += " · fora do ar: " + ", ".join(SOURCE_LABELS.get(f, f) for f in failures)
+    lines.append(line)
     for note in verdict.notes:
         lines.append(f"⚠️ {note}")
     return "\n".join(lines)
@@ -177,5 +186,5 @@ def render_rain_alert(
         f"(prob {_n(prob)}%, {_n(first_rain.precip_mm, 1)} mm/h).",
     ]
     if good_until:
-        lines.append(f"Janela boa até {_clock(good_until)}.")
+        lines.append(f"Janela boa até {_clock(good_until)} — recolha antes.")
     return "\n".join(lines)

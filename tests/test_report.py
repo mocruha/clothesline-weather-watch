@@ -32,6 +32,11 @@ def test_report_has_score_window_and_cptec_disagreement(cfg, make_hours):
     assert "CPTEC: Chuvas Isoladas" in text
     assert "CPTEC prevê chuva" in text
     assert "Open-Meteo, MET Norway, CPTEC/INPE" in text
+    assert "(rajada 10 km/h)" in text
+    assert "☀️ UV 5" in text and "UV 5,0" not in text
+    assert text.count("💨 vento") == 2
+    assert text.count("🌧️ chuva: prob máx") == 2
+    assert text.count("💧 umidade") == 1
     assert "Amanhã" in text
     assert f"Score {tomorrow.score}/100" in text
 
@@ -46,8 +51,8 @@ def test_report_reports_missing_cptec_source(cfg, make_hours):
         failures=["cptec"],
         tomorrow=tomorrow_verdict(cfg, make_hours),
     )
-    assert "CPTEC/INPE indisponível" in text
-    assert "fora: CPTEC/INPE" in text
+    assert "📡 CPTEC/INPE indisponível" in text
+    assert "· fora do ar: CPTEC/INPE" in text
 
 
 def test_report_without_tomorrow_data_says_so(cfg, make_hours):
@@ -55,6 +60,7 @@ def test_report_without_tomorrow_data_says_so(cfg, make_hours):
     verdict = score.day_verdict(hours, DAY, cfg)
     text = report.render_report(verdict, cfg, sources_ok=["open_meteo"], failures=[])
     assert "Amanhã: sem dados" in text
+    assert "ℹ️ CPTEC não traz previsão para hoje" in text
 
 
 def test_evening_report_drops_windows_that_already_ended(cfg, make_hours):
@@ -102,6 +108,13 @@ def test_report_marks_drying_after_midnight_as_madrugada(cfg, make_hours):
     assert "seca ~03h (madrugada)" in text
 
 
+def test_report_keeps_uv_decimal_when_not_zero(cfg, make_hours):
+    hours = make_hours(DAY, count=24, vpd=1.2, et0=0.5, uv=5.5)
+    verdict = score.day_verdict(hours, DAY, cfg)
+    text = report.render_report(verdict, cfg, sources_ok=["open_meteo"], failures=[])
+    assert "☀️ UV 5,5" in text
+
+
 def test_alert_names_first_rain_and_last_good_hour(cfg, make_hours):
     hours = make_hours(
         DAY, count=24, vpd=1.2, et0=0.5, overrides={15: {"prob": 85.0, "precip": 1.2}}
@@ -111,3 +124,4 @@ def test_alert_names_first_rain_and_last_good_hour(cfg, make_hours):
     assert "Recolha o varal" in text
     assert "15h" in text
     assert "85%" in text and "1,2 mm/h" in text
+    assert "Janela boa até 15h — recolha antes." in text
