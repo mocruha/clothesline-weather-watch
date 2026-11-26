@@ -6,6 +6,7 @@ on:
   pull_request:
 
 jobs:
+  # teste descartável do triage (risco alto); remover junto com o PR
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
