@@ -89,14 +89,36 @@ def test_evening_report_keeps_window_that_still_runs(cfg, make_hours):
 
 
 def test_report_renders_midnight_window_end_as_24h(cfg, make_hours):
-    # dia bom: 24h boas, eta 3h -> janela 00h->00h, pendure 21h, seca 03h
+    # dia bom: 24h boas, eta 3h -> janela 00h->24h, seca 03h: cenário de pendurar
+    # no início da janela (dry_at antes de hang_by), não "pendure 21h–24h"
     hours = make_hours(DAY, count=24, vpd=1.2, et0=0.5)
     verdict = score.day_verdict(hours, DAY, cfg)
     text = report.render_report(verdict, cfg, sources_ok=["open_meteo"], failures=[])
     assert "janela 00h–24h" in text
-    assert "pendure 21h–24h" in text
-    assert "seca ~03h" in text
+    assert "pendure até 00h, seca ~03h" in text
     assert "00h–00h" not in text
+
+
+def test_long_window_never_shows_dry_before_hang(cfg, make_hours):
+    # janela 11h–24h, eta 3h: dry_at 14h <= hang_by 21h -> pendurar no início
+    hours = make_hours(DAY, start_hour=11, count=13, vpd=1.2, et0=0.5)
+    verdict = score.day_verdict(hours, DAY, cfg)
+    text = report.render_report(verdict, cfg, sources_ok=["open_meteo"], failures=[])
+    assert "janela 11h–24h" in text
+    assert "pendure até 11h, seca ~14h" in text
+    assert "pendure 21h" not in text
+
+
+def test_cptec_showers_lock_shows_disagreement(cfg, make_hours):
+    hours = make_hours(DAY, count=24, vpd=1.2, et0=0.6)
+    cptec = DailyPoint(city_code=3656, day=DAY, condicao="pc", condicao_desc="Pancadas de Chuva")
+    verdict = score.day_verdict(hours, DAY, cfg, cptec)
+    text = report.render_report(
+        verdict, cfg, sources_ok=["open_meteo", "met_no", "cptec"], failures=[]
+    )
+    assert "📊 CPTEC: Pancadas de Chuva" in text
+    assert "CPTEC prevê chuva; modelos horários mostram quase nada" in text
+    assert text.startswith("🌧️")
 
 
 def test_report_marks_drying_after_midnight_as_madrugada(cfg, make_hours):

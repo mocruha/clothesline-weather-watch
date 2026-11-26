@@ -122,3 +122,32 @@ def test_hourly_rows_carry_features(cfg, make_hours):
     rows = score.hourly_rows(make_hours(DAY, count=2), cfg.thresholds)
     assert set(rows[0]["features"]) >= {"vpd_kpa", "et0_mm", "is_day", "sources"}
     assert rows[0]["features"]["is_day"] is False
+
+
+def test_new_rain_codes_lock_the_day(cfg, make_hours):
+    hours = make_hours(DAY, count=24, vpd=1.2, et0=0.6)
+    for code in ["pc", "ch", "cv", "t", "pm", "npm", "npt", "npn", "npp", "ppt", "ppm", "ppn"]:
+        cptec = DailyPoint(city_code=3656, day=DAY, condicao=code)
+        verdict = score.day_verdict(hours, DAY, cfg, cptec)
+        assert verdict.cptec_lock is True, code
+        assert verdict.score == 100 - int(cfg.thresholds.cptec_lock_penalty), code
+
+
+def test_clear_codes_do_not_lock(cfg, make_hours):
+    hours = make_hours(DAY, count=24, vpd=1.2, et0=0.6)
+    for code in ["cl", "pn", "ps"]:
+        cptec = DailyPoint(city_code=3656, day=DAY, condicao=code)
+        assert score.day_verdict(hours, DAY, cfg, cptec).cptec_lock is False, code
+
+
+def test_new_period_codes_map_and_prune(cfg, make_hours):
+    assert score.cptec_period("pm", cfg) == (True, "manhã")
+    assert score.cptec_period("npt", cfg) == (True, "tarde")
+    assert score.cptec_period("npn", cfg) == (True, "noite")
+    assert score.cptec_period("pc", cfg) == (True, None)
+    overrides = {i: {"prob": 85.0} for i in list(range(0, 8)) + list(range(15, 24))}
+    hours = make_hours(DAY, count=24, vpd=1.2, et0=0.5, overrides=overrides)
+    cptec = DailyPoint(city_code=3656, day=DAY, condicao="npm")
+    verdict = score.day_verdict(hours, DAY, cfg, cptec)
+    assert verdict.windows == []  # janela 08–15 não cabe antes das 6h
+    assert any("manhã" in n for n in verdict.notes)

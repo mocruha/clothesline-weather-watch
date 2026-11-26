@@ -63,9 +63,7 @@ class CptecRules:
 @dataclass(frozen=True)
 class ReportWindow:
     start_hour: int
-    end_hour: int
     evening_start_hour: int
-    evening_end_hour: int
 
 
 @dataclass(frozen=True)

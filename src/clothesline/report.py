@@ -60,11 +60,14 @@ def _window_line(window: Window, th) -> str:
     head = "🌙 janela noturna" if window.kind == "night" else "🧺 janela"
     if window.dry_at is None:
         return f"{head} {_span(window)} · não seca dentro da janela"
-    hang = (
-        f"pendure {_clock(window.hang_by)}–{_clock_end(window.end)}"
-        if window.hang_by and window.hang_by > window.start
-        else f"pendure até {_clock_late(window.hang_by, window.start)}"
-    )
+    if window.dry_at <= window.hang_by:
+        # janela longa: "seca no início" e "pendura no fim" são cenários distintos;
+        # mostra o cenário coerente de pendurar no início da janela
+        hang = f"pendure até {_clock(window.start)}"
+    elif window.hang_by > window.start:
+        hang = f"pendure {_clock(window.hang_by)}–{_clock_end(window.end)}"
+    else:
+        hang = f"pendure até {_clock_late(window.hang_by, window.start)}"
     return (
         f"{head} {_span(window)} · {hang}, "
         f"seca ~{_clock_late(window.dry_at, window.start)}"

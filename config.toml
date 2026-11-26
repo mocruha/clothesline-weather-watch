@@ -41,19 +41,21 @@ rain_alert_horizon_hours = 3
 rain_alert_shift_hours = 2    # re-alerta só se o início da chuva mudar >= 2 h
 
 [cptec]
-# siglas de condição do CPTEC/INPE; chuva trava o dia
+# siglas de chuva da tabela oficial do CPTEC/INPE
+# (servicos.cptec.inpe.br/XML, "Siglas das condições do tempo"); toda chuva
+# trava o dia. ne/nevoeiro/geada (ne, nv, g) ficam fora: não são chuva.
 rain_codes = ["c", "ec", "ci", "in", "pp", "psc", "cm", "ct", "cn",
-              "pcm", "pct", "pcn", "pt", "pnt", "np", "ncm", "nct", "ncn"]
-morning_codes = ["cm", "pcm", "ncm"]
-afternoon_codes = ["ct", "pct", "nct", "pt", "pnt", "np"]
-night_codes = ["cn", "pcn", "ncn"]
+              "pcm", "pct", "pcn", "pt", "pnt", "np", "ncm", "nct", "ncn",
+              "pc", "ch", "cv", "t", "pm", "npm", "npt", "npn", "npp",
+              "ppt", "ppm", "ppn"]
+morning_codes = ["cm", "pcm", "ncm", "pm", "npm", "ppm"]
+afternoon_codes = ["ct", "pct", "nct", "pt", "pnt", "np", "npt", "ppt"]
+night_codes = ["cn", "pcn", "ncn", "npn", "ppn"]
 afternoon_start_hour = 12
 
 [report]
-start_hour = 9                # enviado no primeiro run com hora local em
-end_hour = 10                 # [start_hour, end_hour] (10:59 inclusive)
-evening_start_hour = 16       # segundo relatório: primeiro run em
-evening_end_hour = 17         # [16, 17] (17:59 inclusive)
+start_hour = 9                # manhã: devida a partir das 9h; catch-up até 15:59
+evening_start_hour = 16       # tarde: devida a partir das 16h; catch-up até 23:59
 
 [retention]
 forecast_days = 90
