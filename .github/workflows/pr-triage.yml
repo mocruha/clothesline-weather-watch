@@ -1,0 +1,48 @@
+name: pr-triage
+
+on:
+  pull_request:
+    branches: [staging]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write   # gh label create exige issues:write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh label create risk:low  --color 0e8a16 --force
+          gh label create risk:high --color b60205 --force
+          labels=$(gh pr view "$PR" --json labels --jq '.labels[].name')
+          if echo "$labels" | grep -Eq '^risk:(low|high)$'; then
+            echo "triage já aplicado; nada a fazer"
+            exit 0
+          fi
+          files=$(gh pr view "$PR" --json files --jq '.files[].path')
+          size=$(gh pr view "$PR" --json additions,deletions --jq '.additions + .deletions')
+          high=0
+          reason=""
+          if echo "$files" | grep -Eq '^\.github/|\.pem$|^\.env|secrets'; then
+            high=1; reason="arquivos sensíveis (.github/, .pem, .env, secrets)"
+          fi
+          if [ "$size" -gt 800 ]; then
+            high=1; reason="diff de $size linhas (> 800)"
+          fi
+          if [ "$high" = 1 ]; then
+            gh pr edit "$PR" --add-label risk:high
+            gh pr comment "$PR" --body "triage: alto risco ($reason) — merge humano."
+          else
+            gh pr edit "$PR" --add-label risk:low
+            gh pr review "$PR" --approve --body "triage: low-mid; efeitos isolados em staging."
+            gh pr merge "$PR" --auto --merge
+          fi
