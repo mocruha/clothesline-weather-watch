@@ -32,8 +32,8 @@ jobs:
           size=$(gh pr view "$PR" --json additions,deletions --jq '.additions + .deletions')
           high=0
           reason=""
-          if echo "$files" | grep -Eq '^\.github/|\.pem$|^\.env|secrets'; then
-            high=1; reason="arquivos sensíveis (.github/, .pem, .env, secrets)"
+          if echo "$files" | grep -Eq '(^|/)\.github/|\.pem$|(^|/)\.env|secrets'; then
+            high=1; reason="arquivos sensíveis (.github/ em qualquer nível, .pem, .env, secrets)"
           fi
           if [ "$size" -gt 800 ]; then
             high=1; reason="diff de $size linhas (> 800)"

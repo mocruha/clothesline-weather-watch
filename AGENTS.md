@@ -32,8 +32,8 @@
 
 ## Fluxo staging → main
 - Mudança comum: branch a partir de `staging`, PR para `staging`; o triage
-  auto-mergeia low-mid com CI verde. Alto risco (.github/**, segredos,
-  diff > 800 linhas) fica para o dono.
+  auto-mergeia low-mid com CI verde. Alto risco (arquivos em `.github/`,
+  `.pem`, `.env`, nome contendo `secrets`, diff > 800 linhas) fica para o dono.
 - staging roda horário contra Neon-staging e grupo Telegram de teste
   (watch-staging.yml, que mora na main). Nunca apontar staging para produção.
 - Promoção: PR staging→main com saída de scripts/sanity.py + links dos runs
