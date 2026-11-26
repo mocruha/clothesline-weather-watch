@@ -1,0 +1,24 @@
+name: sanity-staging
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: sanity-staging
+  cancel-in-progress: false
+
+jobs:
+  sanity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: staging
+      - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - run: uv run python scripts/sanity.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
