@@ -2,7 +2,10 @@ name: watch-staging
 
 on:
   schedule:
-    - cron: "45 * * * *" # UTC; mesmo ritmo de produção, minuto deslocado
+    # UTC. Dois ticks/hora, como produção (watch.yml): scheduler do GitHub
+    # engole ticks; o dedup por chave impede relatório duplicado.
+    - cron: "15 * * * *" # mesmo ritmo de produção, minuto deslocado
+    - cron: "45 * * * *"
   workflow_dispatch:
     inputs:
       force_report:
