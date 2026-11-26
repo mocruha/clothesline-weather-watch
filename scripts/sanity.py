@@ -28,7 +28,11 @@ def main() -> int:
         cur.execute("SELECT score, label FROM day_verdict WHERE day = %s", (today,))
         row = cur.fetchone()
         check(
-            row is not None and 0 <= row[0] <= 100 and bool(row[1].strip()),
+            row is not None
+            and row[0] is not None
+            and row[1] is not None
+            and 0 <= row[0] <= 100
+            and bool(row[1].strip()),
             f"day_verdict de {today}: "
             + (f"score={row[0]} label={row[1]!r}" if row else "ausente"),
         )
@@ -60,6 +64,24 @@ def main() -> int:
             check(sent, f"notifications report:{today}: " + ("enviado" if sent else "AUSENTE após 11h"))
         else:
             print(f"⚠️ report:{today}: " + ("enviado" if sent else "ainda não (janela até 10:59)"))
+
+        # 4b. relatório da tarde (janela [16, 17] termina 17:59; antes das 18h é só aviso)
+        cur.execute(
+            "SELECT 1 FROM notifications WHERE key = %s",
+            (f"report-evening:{today}",),
+        )
+        sent_evening = cur.fetchone() is not None
+        if now.hour >= 18:
+            check(
+                sent_evening,
+                f"notifications report-evening:{today}: "
+                + ("enviado" if sent_evening else "AUSENTE após 18h"),
+            )
+        else:
+            print(
+                f"⚠️ report-evening:{today}: "
+                + ("enviado" if sent_evening else "ainda não (janela até 17:59)")
+            )
 
         # 5. scores de hoje (hour é UTC; dia local via AT TIME ZONE)
         cur.execute(
