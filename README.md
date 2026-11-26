@@ -17,10 +17,9 @@ uv run watch --once             # exige DATABASE_URL + Telegram
 uv run watch --once --force-report   # envia os relatórios (manhã e tarde) fora da janela
 ```
 
-WhatsApp não: o horário do relatório é decidido pelo relógio de São Paulo — o
-relatório da manhã sai no primeiro run cujo horário local esteja entre 09:00 e
-10:59, e o da tarde no primeiro run entre 16:00 e 17:59, cada um uma vez por dia.
-Os dois trazem o bloco "Amanhã" com o veredito de D+1.
+O horário dos relatórios segue o relógio de São Paulo: o da manhã sai no
+primeiro run entre 09:00 e 10:59 e o da tarde entre 16:00 e 17:59, um de
+cada por dia. Os dois trazem o bloco "Amanhã" com o veredito de D+1.
 
 `config.toml` guarda local, cityCode do CPTEC e todos os limiares (VPD, chuva,
 rajada, água retida). Mudar de cidade é editar esse arquivo; o cityCode sai de
