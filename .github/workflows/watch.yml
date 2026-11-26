@@ -2,7 +2,11 @@ name: watch
 
 on:
   schedule:
-    - cron: "15 * * * *" # UTC; 09-10h local = 12-13h UTC, 16-17h = 19-20h UTC
+    # UTC (America/Sao_Paulo = UTC-3). Dois ticks/hora: o scheduler do GitHub
+    # engole ticks (já engoliu 20h seguidas em 2026-11-26); o dedup por chave
+    # `report:{dia}` impede relatório duplicado, então redundância é barata.
+    - cron: "15 * * * *" # 09-10h local = 12-13h UTC, 16-17h = 19-20h UTC
+    - cron: "45 * * * *"
   workflow_dispatch:
     inputs:
       force_report:

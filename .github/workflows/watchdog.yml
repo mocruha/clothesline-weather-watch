@@ -1,0 +1,42 @@
+name: watchdog
+
+on:
+  schedule:
+    - cron: "30 21 * * *" # 18:30 local; deadline da manhã (16h) já passou
+  workflow_dispatch:
+
+permissions:
+  contents: read # checkout
+  actions: read # listar runs do watch.yml
+  issues: write # abrir/comentar a issue de falha
+
+jobs:
+  watchdog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - run: |
+          set -o pipefail
+          uv run python scripts/watchdog.py | tee watchdog-report.txt
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          [ -f watchdog-report.txt ] || echo "watchdog não chegou a rodar (setup falhou)" > watchdog-report.txt
+          cat watchdog-report.txt
+          gh label create watchdog --force --color B60205 --description "falha de entrega detectada pelo watchdog"
+          body="$(cat watchdog-report.txt)"$'\n\n'"Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          existing=$(gh issue list --label watchdog --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "watchdog: entrega do varal falhou em $(TZ=America/Sao_Paulo date +%F)" --label watchdog --body "$body"
+          fi
