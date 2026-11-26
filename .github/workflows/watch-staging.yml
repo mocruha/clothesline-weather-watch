@@ -1,0 +1,33 @@
+name: watch-staging
+
+on:
+  schedule:
+    - cron: "45 * * * *" # UTC; mesmo ritmo de produção, minuto deslocado
+  workflow_dispatch:
+    inputs:
+      force_report:
+        description: "Enviar relatórios fora das janelas (chat de TESTE)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: watch-staging
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: staging
+      - uses: astral-sh/setup-uv@v10.4.0   # tag móvel v10 não existe; pinar
+        with:
+          python-version: "3.12"
+      - run: uv sync --frozen
+      - run: uv run watch --once ${{ inputs.force_report && '--force-report' || '' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID_STAGING }}
