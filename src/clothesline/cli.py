@@ -65,12 +65,14 @@ class Decision:
     verdict: score.DayVerdict
 
 
-def in_report_window(now_local: datetime, cfg: Config) -> bool:
-    return cfg.report.start_hour <= now_local.hour <= cfg.report.end_hour
+def morning_due(now_local: datetime, cfg: Config) -> bool:
+    """Manhã devida a partir de start_hour; catch-up até o início da tarde."""
+    return cfg.report.start_hour <= now_local.hour < cfg.report.evening_start_hour
 
 
-def in_evening_window(now_local: datetime, cfg: Config) -> bool:
-    return cfg.report.evening_start_hour <= now_local.hour <= cfg.report.evening_end_hour
+def evening_due(now_local: datetime, cfg: Config) -> bool:
+    """Tarde devida a partir de evening_start_hour; catch-up até o fim do dia."""
+    return cfg.report.evening_start_hour <= now_local.hour
 
 
 def rain_event(hours: list[score.Hour], now_local: datetime, cfg: Config) -> score.Hour | None:
@@ -129,7 +131,7 @@ def plan(
     if cptec_today is not None:
         sources_ok.append("cptec")
 
-    if in_report_window(now_local, cfg) or force_report:
+    if morning_due(now_local, cfg) or force_report:
         key = f"report:{today.isoformat()}"
         if not store.has(key):
             messages.append(
@@ -155,7 +157,7 @@ def plan(
                 )
             )
 
-    if in_evening_window(now_local, cfg) or force_report:
+    if evening_due(now_local, cfg) or force_report:
         key = f"report-evening:{today.isoformat()}"
         if not store.has(key):
             messages.append(

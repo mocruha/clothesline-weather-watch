@@ -57,31 +57,33 @@ def main() -> int:
         row = cur.fetchone()
         check(row is not None, f"forecast_daily_cptec: dia {row[0] if row else 'ausente'}")
 
-        # 4. relatório enviado (janela manhã termina 10:59; antes das 11h é só aviso)
+        # 4. relatório da manhã (catch-up até 15:59; antes das 16h é só aviso)
         cur.execute("SELECT 1 FROM notifications WHERE key = %s", (f"report:{today}",))
         sent = cur.fetchone() is not None
-        if now.hour >= 11:
-            check(sent, f"notifications report:{today}: " + ("enviado" if sent else "AUSENTE após 11h"))
+        if now.hour >= 16:
+            check(
+                sent,
+                f"notifications report:{today}: "
+                + ("enviado" if sent else "AUSENTE após 16h (fim do catch-up)"),
+            )
         else:
-            print(f"⚠️ report:{today}: " + ("enviado" if sent else "ainda não (janela até 10:59)"))
+            print(
+                f"⚠️ report:{today}: "
+                + ("enviado" if sent else "ainda não (catch-up até 15:59)")
+            )
 
-        # 4b. relatório da tarde (janela [16, 17] termina 17:59; antes das 18h é só aviso)
+        # 4b. relatório da tarde (catch-up até 23:59 — deadline não cabe no mesmo
+        # dia, então é só aviso; o watchdog cobre a manhã, que é o crítico)
         cur.execute(
             "SELECT 1 FROM notifications WHERE key = %s",
             (f"report-evening:{today}",),
         )
         sent_evening = cur.fetchone() is not None
-        if now.hour >= 18:
-            check(
-                sent_evening,
-                f"notifications report-evening:{today}: "
-                + ("enviado" if sent_evening else "AUSENTE após 18h"),
-            )
-        else:
-            print(
-                f"⚠️ report-evening:{today}: "
-                + ("enviado" if sent_evening else "ainda não (janela até 17:59)")
-            )
+        print(
+            ("✅ " if sent_evening else "⚠️ ")
+            + f"notifications report-evening:{today}: "
+            + ("enviado" if sent_evening else "ainda não (catch-up até 23:59)")
+        )
 
         # 5. scores de hoje (hour é UTC; dia local via AT TIME ZONE)
         cur.execute(

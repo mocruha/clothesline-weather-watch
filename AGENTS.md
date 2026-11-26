@@ -14,8 +14,9 @@
    PT-BR com score, janela e a linha CPTEC vs modelos.
 
 ## Pegadinhas
-- Cron do Actions é UTC: 09–10h local = 12–13h UTC; a chave `report:{dia}` é o
-  que impede relatório duplicado quando o scheduler atrasa ou o run repete.
+- Cron do Actions é UTC: manhã local 09h–15:59 = 12–18h UTC (catch-up) e tarde
+  16h–23:59 = 19h–02:59 UTC; a chave `report:{dia}` é o que impede relatório
+  duplicado quando o scheduler atrasa ou o run repete.
 - MET Norway responde 403 sem o header `User-Agent` identificando o projeto.
 - CPTEC/BrasilAPI devolve `clima[]` começando em D+1, então o dia atual fica
   sem trava CPTEC; é o comportamento esperado, não fonte fora do ar.

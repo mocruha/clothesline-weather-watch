@@ -2,7 +2,7 @@
 
 ## Resultado
 
-Todo dia entre 09h e 10h e de novo entre 16h e 17h (America/Sao_Paulo) o dono
+Todo dia a partir das 09h e de novo a partir das 16h (America/Sao_Paulo) o dono
 recebe no Telegram um veredito de varal para Osasco/SP — "bom dia de varal" /
 "dá, com janela curta" / "melhor não" — com score, janelas horárias ("pendure
 até HH, seca ~HH"), aviso noturno e o bloco "Amanhã" com o veredito de D+1. Se
@@ -15,9 +15,9 @@ recolher. Tudo vem de 3 APIs abertas e é gravado no Neon.
   chuva) e CPTEC/INPE via BrasilAPI (condição diária BR).
 - Classificador por regras físicas (VPD, ET0 Penman-Monteith, rajada) → score,
   veredito e janelas de varal configuradas em `config.toml`.
-- Relatórios diários idempotentes (manhã 09–10h e tarde 16–17h, um de cada por
-  dia) e alerta de chuva idempotente por evento; re-execução nunca duplica
-  mensagem.
+- Relatórios diários idempotentes (manhã a partir das 09h com catch-up até
+  15:59; tarde a partir das 16h com catch-up até 23:59 — um de cada por dia) e
+  alerta de chuva idempotente por evento; re-execução nunca duplica mensagem.
 - Persistência das horas cruas, do score por hora (com features em jsonb) e do
   veredito do dia para calibração futura.
 
@@ -90,9 +90,13 @@ uv run pytest && uv run watch --once --dry-run
 
 ## Riscos conhecidos
 
-- Cron do Actions atrasa 5–30 min (às vezes mais): cada relatório sai no primeiro
-  run dentro da sua janela (09:00–10:59 e 16:00–17:59) e não repete depois. Run
-  que perde a janela não tem catch-up — mesmo tradeoff nas duas.
+- O scheduler do Actions engole ticks: em 2026-11-26 o `watch` disparou 1 run em
+  ~20h de cron elegível e o relatório da manhã não saiu. Mitigação: dois ticks
+  por hora (`:15` e `:45`) e catch-up no mesmo dia (manhã até 15:59, tarde até
+  23:59), um relatório de cada por dia. Se o scheduler engolir o dia inteiro, o
+  relatório falta e o workflow `watchdog` (18:30 local) abre issue no repo.
+- Run que chega atrasado envia o relatório atrasado, não o perde; a manhã
+  atrasada renderiza o dia inteiro (só a tarde filtra janelas já encerradas).
 - Open-Meteo e MET mudam nomes de campo sem aviso: parse tolerante a ausência,
   mas campo obrigatório ausente vira fonte vazia + warning, não zero.
 - CPTEC retorna só condição diária (sigla): a trava é grosseira e pode rebaixar
