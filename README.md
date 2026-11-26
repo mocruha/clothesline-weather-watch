@@ -58,6 +58,13 @@ O cron é UTC e o GitHub atrasa runs em 5–30 min; as chaves `report:{dia}` e
 `report-evening:{dia}` na tabela `notifications` garantem um relatório de cada
 por dia mesmo com atraso ou re-run.
 
+O scheduler do GitHub descarta ticks (em 2026-11-26 entregou 1 de ~20), então o
+gatilho confiável é um cron externo no [cron-job.org](https://cron-job.org)
+chamando a API de dispatch de hora em hora, com um PAT fine-grained (`Actions:
+write`, só este repositório): `POST /repos/<owner>/<repo>/actions/workflows/watch.yml/dispatches`
+com corpo `{"ref":"main"}`. Os crons do workflow continuam como redundância, e o
+`watchdog` (18:30 local) abre issue se nada rodou em 24h ou se a manhã não saiu.
+
 ## Dados
 
 `forecast_hourly` (fonte × hora × fetch, 90 dias de retenção),

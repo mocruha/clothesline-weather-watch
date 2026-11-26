@@ -91,10 +91,12 @@ uv run pytest && uv run watch --once --dry-run
 ## Riscos conhecidos
 
 - O scheduler do Actions engole ticks: em 2026-11-26 o `watch` disparou 1 run em
-  ~20h de cron elegível e o relatório da manhã não saiu. Mitigação: dois ticks
-  por hora (`:15` e `:45`) e catch-up no mesmo dia (manhã até 15:59, tarde até
-  23:59), um relatório de cada por dia. Se o scheduler engolir o dia inteiro, o
-  relatório falta e o workflow `watchdog` (18:30 local) abre issue no repo.
+  ~20h de cron elegível e o relatório da manhã não saiu. Mitigação em camadas:
+  dois ticks por hora (`:15` e `:45`), catch-up no mesmo dia (manhã até 15:59,
+  tarde até 23:59) e um **gatilho externo** (cron-job.org) chamando
+  `POST /actions/workflows/watch.yml/dispatches` de hora em hora — `workflow_dispatch`
+  não passa pela fila que descarta. Se tudo falhar, o `watchdog` (18:30 local) abre
+  issue no repo.
 - Run que chega atrasado envia o relatório atrasado, não o perde; a manhã
   atrasada renderiza o dia inteiro (só a tarde filtra janelas já encerradas).
 - Open-Meteo e MET mudam nomes de campo sem aviso: parse tolerante a ausência,
