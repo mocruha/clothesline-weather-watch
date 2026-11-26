@@ -13,7 +13,7 @@ import psycopg
 from clothesline.db import connect
 
 TZ = ZoneInfo("America/Sao_Paulo")
-MIN_RUNS_24H = 12  # 2 crons/hora esperam 48; 12 tolera throttling forte
+MIN_RUNS_24H = 12  # 2 crons/hora + dispatch externo: 12 tolera descarte forte
 
 
 def main() -> int:
@@ -33,7 +33,7 @@ def main() -> int:
     try:
         resp = httpx.get(
             f"https://api.github.com/repos/{repo}/actions/workflows/watch.yml/runs",
-            params={"event": "schedule", "per_page": 100},
+            params={"per_page": 100},
             headers={
                 "Authorization": f"Bearer {token}",
                 "Accept": "application/vnd.github+json",
@@ -48,7 +48,7 @@ def main() -> int:
         ]
         check(
             len(runs) >= MIN_RUNS_24H,
-            f"watch: {len(runs)} runs schedule nas últimas 24h (mínimo {MIN_RUNS_24H})",
+            f"watch: {len(runs)} runs nas últimas 24h (mínimo {MIN_RUNS_24H})",
         )
     except httpx.HTTPError as exc:
         check(False, f"watch: API do GitHub inacessível ({exc})")
